@@ -13,7 +13,7 @@ where
 }
 
 struct ParseResult {
-    policy: (i32, i32),
+    policy: (usize, usize),
     letter: char,
     password: String,
 }
@@ -25,9 +25,9 @@ fn parse(line: String) -> ParseResult {
     let letter = vec[1].chars().collect::<Vec<char>>()[0];
     let password = vec[2];
 
-    let mut policy_vec: Vec<i32> = policy
+    let mut policy_vec: Vec<usize> = policy
         .split("-")
-        .map(|x| x.parse::<i32>().expect("expected a number"))
+        .map(|x| x.parse::<usize>().expect("expected a number"))
         .collect();
     let policy_first = policy_vec.remove(0);
     let policy_second = policy_vec.remove(0);
@@ -51,7 +51,21 @@ fn valid(line: String) -> bool {
     return parse_results.policy.0 <= count && count <= parse_results.policy.1;
 }
 
-// fn valid2(line: String) -> bool {}
+fn valid2(line: String) -> bool {
+    let parse_results = parse(line);
+    let password = parse_results.password;
+    let first_occurrence = password
+        .chars()
+        .nth(parse_results.policy.0 - 1)
+        .expect("Index out of range");
+    let second_occurrence = password
+        .chars()
+        .nth(parse_results.policy.1 - 1)
+        .expect("Index out of range");
+
+    return (first_occurrence == parse_results.letter)
+        ^ (second_occurrence == parse_results.letter);
+}
 
 fn main() {
     let matches = App::new("AOC solution 1")
@@ -69,7 +83,12 @@ fn main() {
     if let Ok(lines) = read_lines(path) {
         for line in lines {
             if let Ok(line_content) = line {
-                if valid(line_content) {
+                let function = if matches.is_present("second") {
+                    valid2
+                } else {
+                    valid
+                };
+                if function(line_content) {
                     count += 1;
                 }
             }
