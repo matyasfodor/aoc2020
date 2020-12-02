@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::str::Chars;
 
 // Taken from https://doc.rust-lang.org/rust-by-example/std_misc/file/read_lines.html
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
@@ -39,16 +40,31 @@ fn parse(line: String) -> ParseResult {
     }
 }
 
+trait CountableChars {
+    fn count_char(&mut self, c: char) -> usize;
+}
+
+impl<'a> CountableChars for Chars<'a> {
+    fn count_char(&mut self, c: char) -> usize {
+        let mut ret: usize = 0;
+        for char in self {
+            if char == c {
+                ret += 1;
+            }
+        }
+        return ret;
+    }
+}
+
 fn valid(line: String) -> bool {
     let parse_results = parse(line);
 
-    let mut count = 0;
-    for char in parse_results.password.chars() {
-        if char == parse_results.letter {
-            count += 1;
-        }
-    }
-    return parse_results.policy.0 <= count && count <= parse_results.policy.1;
+    let occurrences = parse_results
+        .password
+        .chars()
+        .count_char(parse_results.letter);
+
+    return parse_results.policy.0 <= occurrences && occurrences <= parse_results.policy.1;
 }
 
 fn valid2(line: String) -> bool {
