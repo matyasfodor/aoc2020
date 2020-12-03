@@ -34,19 +34,7 @@ impl std::fmt::Display for Coordinates {
     }
 }
 
-fn main() {
-    let matches = App::new("AOC solution 1")
-        .arg(Arg::with_name("test").short("t").long("test"))
-        .arg(Arg::with_name("second").short("s").long("second"))
-        .get_matches();
-
-    let path = if matches.is_present("test") {
-        "test.txt"
-    } else {
-        "input.txt"
-    };
-
-    let step = Coordinates { x: 3, y: 1 };
+fn count_trees(step: &Coordinates, path: &str) -> usize {
     let mut current_coords = Coordinates { x: 0, y: 0 };
 
     let mut tree_count = 0;
@@ -70,6 +58,22 @@ fn main() {
             current_coords.y -= 1;
         }
     }
+    tree_count
+}
 
+fn main() {
+    let matches = App::new("AOC solution 1")
+        .arg(Arg::with_name("test").short("t").long("test"))
+        .arg(Arg::with_name("second").short("s").long("second"))
+        .get_matches();
+
+    let path = if matches.is_present("test") {
+        "test.txt"
+    } else {
+        "input.txt"
+    };
+
+    let step = Coordinates { x: 3, y: 1 };
+    let tree_count = count_trees(&step, path);
     println!("There are {} trees encountered alltogether", tree_count);
 }
