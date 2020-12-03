@@ -73,7 +73,20 @@ fn main() {
         "input.txt"
     };
 
-    let step = Coordinates { x: 3, y: 1 };
-    let tree_count = count_trees(&step, path);
+    let steps = if matches.is_present("second") {
+        vec![
+            Coordinates { x: 1, y: 1 },
+            Coordinates { x: 3, y: 1 },
+            Coordinates { x: 5, y: 1 },
+            Coordinates { x: 7, y: 1 },
+            Coordinates { x: 1, y: 2 },
+        ]
+    } else {
+        vec![Coordinates { x: 3, y: 1 }]
+    };
+    let tree_count = steps
+        .iter()
+        .map(|step| count_trees(&step, path))
+        .product::<usize>();
     println!("There are {} trees encountered alltogether", tree_count);
 }
