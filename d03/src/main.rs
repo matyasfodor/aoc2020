@@ -4,8 +4,6 @@ use std::io::{self, BufRead};
 use std::ops;
 use std::path::Path;
 
-// use std::str::Chars;
-
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<Path>,
@@ -36,16 +34,6 @@ impl std::fmt::Display for Coordinates {
     }
 }
 
-// struct Cursor {
-//     width: usize,
-//     step: Coordinates,
-//     coords: Coordinates,
-// }
-
-// impl Cursor {
-
-// }
-
 fn main() {
     let matches = App::new("AOC solution 1")
         .arg(Arg::with_name("test").short("t").long("test"))
@@ -69,16 +57,10 @@ fn main() {
 
     while ok {
         if line_content.chars().nth(current_coords.x % len).unwrap() == '#' {
-            println!("Tree found");
             tree_count += 1;
         }
         current_coords = current_coords + &step;
         while current_coords.y > 0 {
-            println!("Line digested");
-            println!("line content           {}", line_content);
-            // line_content = ;
-            // let next_result = lines.next();
-            // next_result
             if let Some(Ok(new_line_content)) = lines.next() {
                 line_content = new_line_content;
             } else {
@@ -87,31 +69,7 @@ fn main() {
             }
             current_coords.y -= 1;
         }
-        // current_coords.x = current_coords.x % len;
-        println!("Current coords {:}", current_coords);
     }
-    // for line in lines {
-    // if let Ok(line_content) = line {
-    // if current_coords.y > 0 {
-    //     println!("Line digested");
-    //     println!("line content           {}", line_content);
-    //     current_coords.y -= 1;
-    // }
-    // Could be stored as result
-    // if line_content.chars().nth(current_coords.x % len).unwrap() == '#' {
-    //     println!("Tree found");
-    //     tree_count += 1;
-    // }
-    // current_coords = current_coords + &step;
-    // while current_coords.y > 0 {
-    //     println!("Line digested");
-    //     println!("line content           {}", line_content);
-    //     line_content = lines.next();
-    //     current_coords.y -= 1;
-    // }
-    // current_coords.x = current_coords.x % len;
-    // println!("Current coords {:}", current_coords);
-    // }
-    // }
+
     println!("There are {} trees encountered alltogether", tree_count);
 }
