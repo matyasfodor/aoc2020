@@ -20,10 +20,10 @@ struct Coordinates {
 impl ops::Add<&Coordinates> for Coordinates {
     type Output = Coordinates;
 
-    fn add(self, _rhs: &Coordinates) -> Coordinates {
+    fn add(self, rhs: &Coordinates) -> Coordinates {
         Coordinates {
-            x: self.x + _rhs.x,
-            y: self.y + _rhs.y,
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }
@@ -62,7 +62,7 @@ fn count_trees(step: &Coordinates, path: &str) -> usize {
 }
 
 fn main() {
-    let matches = App::new("AOC solution 1")
+    let matches = App::new("AOC solution 3")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();

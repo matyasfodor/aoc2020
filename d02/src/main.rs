@@ -84,7 +84,7 @@ fn valid2(line: String) -> bool {
 }
 
 fn main() {
-    let matches = App::new("AOC solution 1")
+    let matches = App::new("AOC solution 2")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();
