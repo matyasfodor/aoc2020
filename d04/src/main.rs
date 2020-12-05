@@ -67,19 +67,14 @@ fn validate_pid(value: &str) -> bool {
     re.is_match(&value)
 }
 
-struct PassportGenerator<'a> {
+struct PassportGenerator {
     lines: std::io::Lines<std::io::BufReader<std::fs::File>>,
-    // required_fields: Vec<&'a str>,
     validate: bool,
     validators: HashMap<String, ValidatorCallback>,
-    b: &'a str,
 }
 
-impl<'a> PassportGenerator<'a> {
-    fn new(
-        path: &str,
-        /*required_fields: Vec<&'a str>, */ validate: bool,
-    ) -> PassportGenerator<'a> {
+impl PassportGenerator {
+    fn new(path: &str, validate: bool) -> PassportGenerator {
         let mut validators: HashMap<String, ValidatorCallback> = HashMap::new();
         validators.insert("byr".to_owned(), validate_byr);
         validators.insert("iyr".to_owned(), validate_iyr);
@@ -92,12 +87,11 @@ impl<'a> PassportGenerator<'a> {
             lines: read_lines(path).expect("File not found"),
             validators,
             validate,
-            b: "",
         }
     }
 }
 
-impl<'a> Iterator for PassportGenerator<'a> {
+impl<'a> Iterator for PassportGenerator {
     type Item = bool;
     fn next(&mut self) -> Option<Self::Item> {
         let mut counts: HashMap<String, usize> = HashMap::new();
