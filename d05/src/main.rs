@@ -29,6 +29,34 @@ fn boarding_pass_to_seat_id(boarding_pass: String) -> usize {
     res
 }
 
+struct MissingSeatReducerState {
+    min: usize,
+    max: usize,
+    product: usize,
+}
+
+fn missing_set_reducer(
+    acc: Option<MissingSeatReducerState>,
+    seat_id: usize,
+) -> Option<MissingSeatReducerState> {
+    match acc {
+        None => Some(MissingSeatReducerState {
+            min: seat_id,
+            max: seat_id,
+            product: seat_id,
+        }),
+        // _ => None,
+        Some(MissingSeatReducerState { min, max, product }) => {
+            // let new_min = ;
+            Some(MissingSeatReducerState {
+                min: min.min(seat_id),
+                max: max.max(seat_id),
+                product: product ^ seat_id,
+            })
+        }
+    }
+}
+
 fn main() {
     let matches = App::new("AOC solution 3")
         .arg(Arg::with_name("test").short("t").long("test"))
@@ -42,14 +70,21 @@ fn main() {
     };
 
     if let Ok(lines) = read_lines(path) {
-        if let Some(max_id) = lines
-            .map(|line_result| match line_result {
-                Ok(line) => boarding_pass_to_seat_id(line),
-                _ => 0,
-            })
-            .max()
-        {
-            println!("Highest seta ID {}", max_id);
+        let seat_ids_iter = lines.map(|line_result| match line_result {
+            Ok(line) => boarding_pass_to_seat_id(line),
+            _ => 0,
+        });
+        if matches.is_present("second") {
+            if let Some(reducer_state) = seat_ids_iter.fold(None, missing_set_reducer) {
+                let all = (reducer_state.min + 1..reducer_state.max + 1)
+                    .fold(reducer_state.min, |a, b| a ^ b);
+                let missing_seat_id = all ^ reducer_state.product;
+                println!("Missing seat id {}", missing_seat_id);
+            }
+        } else {
+            if let Some(max_id) = seat_ids_iter.max() {
+                println!("Highest seta ID {}", max_id);
+            }
         }
     }
 }
