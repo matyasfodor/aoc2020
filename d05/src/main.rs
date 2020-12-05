@@ -19,6 +19,10 @@ fn col_reduce(prev: usize, c: char) -> usize {
     prev * 2 + if c == 'L' { 0 } else { 1 }
 }
 
+/**
+ * Possible optimization: Simply map B, R -> 1; F, L -> 0
+ * The produced binary stirng is the seat id
+ */
 fn boarding_pass_to_seat_id(boarding_pass: String) -> usize {
     let row_chars = &boarding_pass[..7];
     let column_chars = &boarding_pass[7..];
@@ -29,6 +33,20 @@ fn boarding_pass_to_seat_id(boarding_pass: String) -> usize {
     res
 }
 
+/**
+ * Finding the missing seat id
+ *
+ * Finding the missing seat ID in O(N)
+ * The key to find the missing seat ID with a single pass
+ * is to keep track of the boundaries (min, max),
+ * while xor-ing the seat ids (product).
+ *
+ * Finally a range from min - max xored together xored with the product
+ * will result the missing seat ID.
+ *
+ * Pseudo solution:
+ * (min..max+1).reduce(xor) xor product = missing_id
+ */
 struct MissingSeatReducerState {
     min: usize,
     max: usize,
@@ -45,15 +63,11 @@ fn missing_set_reducer(
             max: seat_id,
             product: seat_id,
         }),
-        // _ => None,
-        Some(MissingSeatReducerState { min, max, product }) => {
-            // let new_min = ;
-            Some(MissingSeatReducerState {
-                min: min.min(seat_id),
-                max: max.max(seat_id),
-                product: product ^ seat_id,
-            })
-        }
+        Some(MissingSeatReducerState { min, max, product }) => Some(MissingSeatReducerState {
+            min: min.min(seat_id),
+            max: max.max(seat_id),
+            product: product ^ seat_id,
+        }),
     }
 }
 
