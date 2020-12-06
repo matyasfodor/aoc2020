@@ -1,21 +1,11 @@
 use clap::{App, Arg};
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::FromIterator;
-use std::path::Path;
-
-// fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-// where
-//     P: AsRef<Path>,
-// {
-//     let file = File::open(filename)?;
-//     Ok(io::BufReader::new(file).lines())
-// }
 
 struct ReduceState {
-    chars: HashSet<char>,
+    chars: Option<HashSet<char>>,
     count: usize,
 }
 
@@ -31,32 +21,38 @@ fn main() {
         "input.txt"
     };
     let file = File::open(path).expect("File not found");
-    // let acc: HashSet<char> = HashSet::new();
     let res = io::BufReader::new(file).lines().fold(
         ReduceState {
-            chars: HashSet::new(),
+            chars: None,
             count: 0,
         },
         |acc, line| {
             let unwrapped_line = line.unwrap();
-            match unwrapped_line.as_str() {
-                "" => ReduceState {
-                    chars: HashSet::new(),
-                    count: acc.count + acc.chars.iter().count(),
+            match (unwrapped_line.as_str(), acc.chars) {
+                ("", Some(chars)) => ReduceState {
+                    chars: None,
+                    count: acc.count + chars.iter().count(),
                 },
-                line_contents => {
+                (line_contents, None) => ReduceState {
+                    chars: Some(HashSet::from_iter(line_contents.chars())),
+                    count: acc.count,
+                },
+                (line_contents, Some(chars)) => {
                     let new_hash: HashSet<char> = HashSet::from_iter(line_contents.chars());
-                    let new_acc =
-                        HashSet::from_iter(acc.chars.union(&new_hash).map(|x| x.to_owned()));
+                    let new_acc = if matches.is_present("second") {
+                        HashSet::from_iter(chars.intersection(&new_hash).map(|x| x.to_owned()))
+                    } else {
+                        HashSet::from_iter(chars.union(&new_hash).map(|x| x.to_owned()))
+                    };
                     ReduceState {
-                        chars: new_acc,
+                        chars: Some(new_acc),
                         count: acc.count,
                     }
                 }
             }
         },
     );
-    let custom_item_count = res.count + res.chars.iter().count();
+    let custom_item_count = res.count + res.chars.unwrap().iter().count();
 
     println!("Found {} items", custom_item_count)
 }

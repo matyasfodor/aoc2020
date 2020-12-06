@@ -72,7 +72,7 @@ fn missing_set_reducer(
 }
 
 fn main() {
-    let matches = App::new("AOC solution 3")
+    let matches = App::new("AOC solution 5")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();
