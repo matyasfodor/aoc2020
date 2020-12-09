@@ -6,16 +6,16 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::FromIterator;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 struct ParsedInfo {
     name: String,
-    children: Vec<String>,
+    children: Vec<CountedEntry>,
 }
 
-impl std::fmt::Debug for ParsedInfo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(name: {}, children: {:?})", self.name, self.children)
-    }
+#[derive(PartialEq, Debug)]
+struct CountedEntry {
+    name: String,
+    count: usize,
 }
 
 fn extract_info(line: &str) -> ParsedInfo {
@@ -32,7 +32,10 @@ fn extract_info(line: &str) -> ParsedInfo {
 
         children_re
             .captures_iter(&capture["rest"])
-            .map(|x| x["name"].to_string())
+            .map(|x| CountedEntry {
+                name: x["name"].to_string(),
+                count: x["count"].parse().unwrap(),
+            })
             .collect()
     };
     ParsedInfo {
@@ -44,7 +47,7 @@ fn extract_info(line: &str) -> ParsedInfo {
 fn reducer(mut acc: HashMap<String, Vec<String>>, line: String) -> HashMap<String, Vec<String>> {
     let ParsedInfo { name, children } = extract_info(line.as_str());
     for child in children.iter() {
-        acc.entry(child.to_string())
+        acc.entry(child.name.to_string())
             .or_insert(vec![])
             .push(name.to_owned());
     }
@@ -108,7 +111,16 @@ mod tests {
             ),
             super::ParsedInfo {
                 name: "vibrant plum".to_owned(),
-                children: vec!["faded blue".to_string(), "dotted black".to_string()],
+                children: vec![
+                    super::CountedEntry {
+                        name: "faded blue".to_string(),
+                        count: 5,
+                    },
+                    super::CountedEntry {
+                        name: "dotted black".to_string(),
+                        count: 6,
+                    }
+                ],
             }
         )
     }
