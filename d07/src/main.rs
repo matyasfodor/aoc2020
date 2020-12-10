@@ -12,10 +12,16 @@ struct ParsedInfo {
     children: Vec<CountedEntry>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug, Hash, Eq)]
 struct CountedEntry {
     name: String,
     count: usize,
+}
+
+impl std::cmp::PartialEq for CountedEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
 }
 
 fn extract_info(line: &str) -> ParsedInfo {
@@ -44,13 +50,28 @@ fn extract_info(line: &str) -> ParsedInfo {
     }
 }
 
-fn reducer(mut acc: HashMap<String, Vec<String>>, line: String) -> HashMap<String, Vec<String>> {
+fn reducer(
+    mut acc: HashMap<String, Vec<CountedEntry>>,
+    line: String,
+) -> HashMap<String, Vec<CountedEntry>> {
     let ParsedInfo { name, children } = extract_info(line.as_str());
     for child in children.iter() {
         acc.entry(child.name.to_string())
             .or_insert(vec![])
-            .push(name.to_owned());
+            .push(CountedEntry {
+                name: name.to_owned(),
+                count: child.count,
+            });
     }
+    acc
+}
+
+fn child_reducer(
+    mut acc: HashMap<String, Vec<CountedEntry>>,
+    line: String,
+) -> HashMap<String, Vec<CountedEntry>> {
+    let ParsedInfo { name, children } = extract_info(line.as_str());
+    acc.insert(name, children);
     acc
 }
 
@@ -66,14 +87,14 @@ fn main() {
         "input.txt"
     };
     let file = File::open(path).expect("File not found");
-    let acc: HashMap<String, Vec<String>> = HashMap::new();
+    let acc: HashMap<String, Vec<CountedEntry>> = HashMap::new();
     let res = io::BufReader::new(file)
         .lines()
         .map(|x| x.unwrap())
         .fold(acc, reducer);
 
     let mut to_visit: HashSet<String> =
-        HashSet::from_iter(res["shiny gold"].iter().map(|x| x.to_owned()));
+        HashSet::from_iter(res["shiny gold"].iter().map(|x| x.name.to_owned()));
     let mut visited: HashSet<String> = HashSet::new();
 
     while to_visit.len() > 0 {
@@ -82,7 +103,7 @@ fn main() {
 
         if let Some(entry) = res.get(&value) {
             for to_visit_element in entry.iter() {
-                to_visit.insert(to_visit_element.to_string());
+                to_visit.insert(to_visit_element.name.to_string());
             }
         }
         visited.insert(value);
