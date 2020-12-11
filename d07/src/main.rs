@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use regex::Regex;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::FromIterator;
@@ -12,16 +13,10 @@ struct ParsedInfo {
     children: Vec<CountedEntry>,
 }
 
-#[derive(Debug, Hash, Eq)]
+#[derive(PartialEq, Debug, Hash, Eq, Clone)]
 struct CountedEntry {
     name: String,
     count: usize,
-}
-
-impl std::cmp::PartialEq for CountedEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
 }
 
 fn extract_info(line: &str) -> ParsedInfo {
@@ -50,7 +45,7 @@ fn extract_info(line: &str) -> ParsedInfo {
     }
 }
 
-fn reducer(
+fn parent_reducer(
     mut acc: HashMap<String, Vec<CountedEntry>>,
     line: String,
 ) -> HashMap<String, Vec<CountedEntry>> {
@@ -75,26 +70,38 @@ fn child_reducer(
     acc
 }
 
-fn main() {
-    let matches = App::new("AOC solution 7")
-        .arg(Arg::with_name("test").short("t").long("test"))
-        .arg(Arg::with_name("second").short("s").long("second"))
-        .get_matches();
+fn aggregate_with_counts(res: HashMap<String, Vec<CountedEntry>>) -> usize {
+    let mut to_visit: VecDeque<CountedEntry> = VecDeque::from_iter(
+        res.get("shiny gold")
+            .expect("Shiny gold bag not fountd in result")
+            .iter()
+            .map(|x| x.clone()),
+    );
+    let mut count: usize = 0;
 
-    let path = if matches.is_present("test") {
-        "test.txt"
-    } else {
-        "input.txt"
-    };
-    let file = File::open(path).expect("File not found");
-    let acc: HashMap<String, Vec<CountedEntry>> = HashMap::new();
-    let res = io::BufReader::new(file)
-        .lines()
-        .map(|x| x.unwrap())
-        .fold(acc, reducer);
+    while to_visit.len() > 0 {
+        let value = to_visit.pop_front().unwrap();
+        count += value.count;
 
-    let mut to_visit: HashSet<String> =
-        HashSet::from_iter(res["shiny gold"].iter().map(|x| x.name.to_owned()));
+        if let Some(entry) = res.get(&value.name) {
+            for to_visit_element in entry.iter() {
+                to_visit.push_back(CountedEntry {
+                    name: to_visit_element.name.clone(),
+                    count: value.count * to_visit_element.count,
+                });
+            }
+        }
+    }
+    count
+}
+
+fn aggregate_without_counts(res: HashMap<String, Vec<CountedEntry>>) -> usize {
+    let mut to_visit: HashSet<String> = HashSet::from_iter(
+        res.get("shiny gold")
+            .expect("Shiny gold bag not fountd in result")
+            .iter()
+            .map(|x| x.name.to_owned()),
+    );
     let mut visited: HashSet<String> = HashSet::new();
 
     while to_visit.len() > 0 {
@@ -108,7 +115,38 @@ fn main() {
         }
         visited.insert(value);
     }
-    println!("Parents {}", visited.len());
+    visited.len()
+}
+
+fn main() {
+    let matches = App::new("AOC solution 7")
+        .arg(Arg::with_name("test").short("t").long("test"))
+        .arg(Arg::with_name("second").short("s").long("second"))
+        .get_matches();
+
+    let path = if matches.is_present("test") {
+        "test.txt"
+    } else {
+        "input.txt"
+    };
+    let file = File::open(path).expect("File not found");
+    let acc: HashMap<String, Vec<CountedEntry>> = HashMap::new();
+    let reducer = if matches.is_present("second") {
+        child_reducer
+    } else {
+        parent_reducer
+    };
+    let res = io::BufReader::new(file)
+        .lines()
+        .map(|x| x.unwrap())
+        .fold(acc, reducer);
+
+    let count = if matches.is_present("second") {
+        aggregate_with_counts
+    } else {
+        aggregate_without_counts
+    }(res);
+    println!("Result {}", count);
 }
 
 #[cfg(test)]
