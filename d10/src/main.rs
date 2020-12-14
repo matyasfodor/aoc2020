@@ -51,9 +51,7 @@ fn number_of_variations(n: &usize) -> usize {
         .map(|x| {
             let counted = x.iter().collect::<Counter<_>>();
             let divisor: usize = counted.iter().map(|x| x.1.factorial()).product();
-            let res = x.len().factorial() / divisor;
-            // println!("Line {:?} up {} bottom {}", x, x.len().factorial(), divisor);
-            res
+            x.len().factorial() / divisor
         })
         .sum()
 }
@@ -101,7 +99,6 @@ fn main() {
     adapters.insert(0);
     adapters.insert(adapters.last().unwrap() + 3);
     let diffs: Vec<usize> = pairwise(adapters.iter()).map(|x| x.1 - x.0).collect();
-    println!("Diffs {:?}", diffs);
 
     let counted_diffs = diffs.iter().collect::<Counter<_>>();
     let res =
@@ -109,16 +106,10 @@ fn main() {
     println!("First {:?}", res);
 
     let consecutive_1_blocks: Vec<usize> = get_consecutive_blocks(&diffs, &1);
-    // println!("consecutive_1_blocks: {:?}", consecutive_1_blocks);
     let res: usize = consecutive_1_blocks
         .iter()
         .map(number_of_variations)
-        // .map(|x| {
-        //     print!("{:?} ", x);
-        //     x
-        // })
         .product();
-    // print!("\n");
     println!("Second: {}", res);
 }
 
@@ -137,8 +128,8 @@ mod tests {
     fn test_number_of_variations() {
         assert_eq!(super::number_of_variations(&1), 1);
         assert_eq!(super::number_of_variations(&2), 2);
-        assert_eq!(super::number_of_variations(&3), 5);
-        assert_eq!(super::number_of_variations(&4), 12);
+        assert_eq!(super::number_of_variations(&3), 4);
+        assert_eq!(super::number_of_variations(&4), 7);
     }
     #[test]
 
