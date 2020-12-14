@@ -1,9 +1,9 @@
 use clap::{App, Arg};
 use counter::Counter;
+use factorial::Factorial;
 use sorted_vec::SortedVec;
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::iter;
 
 fn pairwise<I>(right: I) -> impl Iterator<Item = (I::Item, I::Item)>
 where
@@ -13,17 +13,17 @@ where
     left.zip(right.into_iter().skip(1))
 }
 
-fn get_combinations(n: usize, upper_bound: usize) -> Vec<Vec<usize>> {
-    if n == 0 {
+fn get_combinations(n: &usize, upper_bound: usize) -> Vec<Vec<usize>> {
+    if *n == 0 {
         return vec![vec![]];
     }
-    let ones: Vec<Vec<usize>> = get_combinations(n - 1, 1)
+    let ones: Vec<Vec<usize>> = get_combinations(&(n - &1), 1)
         .iter()
         .map(|x| vec![1].iter().cloned().chain(x.iter().cloned()).collect())
         .collect();
 
-    let twos: Vec<Vec<usize>> = if n >= 2 && upper_bound >= 2 {
-        get_combinations(n - 2, 2)
+    let twos: Vec<Vec<usize>> = if *n >= 2 && upper_bound >= 2 {
+        get_combinations(&(n - &2), 2)
             .iter()
             .map(|x| vec![2].iter().cloned().chain(x.iter().cloned()).collect())
             .collect()
@@ -31,8 +31,8 @@ fn get_combinations(n: usize, upper_bound: usize) -> Vec<Vec<usize>> {
         vec![]
     };
 
-    let threes: Vec<Vec<usize>> = if n >= 3 && upper_bound >= 3 {
-        get_combinations(n - 3, 3)
+    let threes: Vec<Vec<usize>> = if *n >= 3 && upper_bound >= 3 {
+        get_combinations(&(n - &3), 3)
             .iter()
             .map(|x| vec![3].iter().cloned().chain(x.iter().cloned()).collect())
             .collect()
@@ -43,6 +43,37 @@ fn get_combinations(n: usize, upper_bound: usize) -> Vec<Vec<usize>> {
         .chain(twos.into_iter())
         .chain(threes.into_iter())
         .collect()
+}
+
+fn number_of_variations(n: &usize) -> usize {
+    get_combinations(n, 100)
+        .iter()
+        .map(|x| {
+            let counted = x.iter().collect::<Counter<_>>();
+            let divisor: usize = counted.iter().map(|x| x.1.factorial()).product();
+            let res = x.len().factorial() / divisor;
+            // println!("Line {:?} up {} bottom {}", x, x.len().factorial(), divisor);
+            res
+        })
+        .sum()
+}
+
+fn get_consecutive_blocks(arr: &Vec<usize>, n: &usize) -> Vec<usize> {
+    let (mut blocks, next) = arr.iter().fold((vec![], 0), |mut acc, next| {
+        if next != n {
+            if acc.1 > 0 {
+                acc.0.push(acc.1);
+            }
+            acc.1 = 0;
+        } else {
+            acc.1 += 1;
+        }
+        acc
+    });
+    if next > 0 {
+        blocks.push(next);
+    }
+    blocks
 }
 
 fn main() {
@@ -76,17 +107,45 @@ fn main() {
     let res =
         counted_diffs.get(&1).expect("No 1s found") * counted_diffs.get(&3).expect("No 3s found");
     println!("First {:?}", res);
+
+    let consecutive_1_blocks: Vec<usize> = get_consecutive_blocks(&diffs, &1);
+    // println!("consecutive_1_blocks: {:?}", consecutive_1_blocks);
+    let res: usize = consecutive_1_blocks
+        .iter()
+        .map(number_of_variations)
+        // .map(|x| {
+        //     print!("{:?} ", x);
+        //     x
+        // })
+        .product();
+    // print!("\n");
+    println!("Second: {}", res);
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn it_works() {
-        assert_eq!(super::get_combinations(1, 100), vec![vec![1]]);
-        assert_eq!(super::get_combinations(2, 100), vec![vec![1, 1], vec![2]]);
+        assert_eq!(super::get_combinations(&1, 100), vec![vec![1]]);
+        assert_eq!(super::get_combinations(&2, 100), vec![vec![1, 1], vec![2]]);
         assert_eq!(
-            super::get_combinations(3, 100),
+            super::get_combinations(&3, 100),
             vec![vec![1, 1, 1], vec![2, 1], vec![3]]
+        );
+    }
+    #[test]
+    fn test_number_of_variations() {
+        assert_eq!(super::number_of_variations(&1), 1);
+        assert_eq!(super::number_of_variations(&2), 2);
+        assert_eq!(super::number_of_variations(&3), 5);
+        assert_eq!(super::number_of_variations(&4), 12);
+    }
+    #[test]
+
+    fn test_get_consecutive_blocks() {
+        assert_eq!(
+            super::get_consecutive_blocks(&vec![1, 1, 1, 3, 1, 1, 3, 1, 3, 3, 1, 1, 1, 1], &1),
+            vec![3, 2, 1, 4]
         );
     }
 }

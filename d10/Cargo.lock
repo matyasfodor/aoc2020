@@ -62,7 +62,17 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "counter",
+ "factorial",
  "sorted-vec",
+]
+
+[[package]]
+name = "factorial"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42396d2e190af0797b171935e754dbef0c3df12cacaf52476c502ee3b85d49de"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
