@@ -75,7 +75,7 @@ fn get_consecutive_blocks(arr: &Vec<usize>, n: &usize) -> Vec<usize> {
 }
 
 fn main() {
-    let matches = App::new("AOC solution 8")
+    let matches = App::new("AOC solution 10")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();
