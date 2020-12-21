@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use ndarray::{Array, Array2, Axis};
+use ndarray::{stack, Array, Array2, Axis};
 use std::fs::File;
 use std::io::{self, BufRead};
 
@@ -24,6 +24,33 @@ fn neighbor_counter(arr: &Array2<usize>) -> Array2<usize> {
             *ret.get_mut((x as usize, y as usize)).unwrap() = counter;
         }
     }
+    ret
+}
+
+fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>) -> Array2<usize> {
+    let neighbors = neighbor_counter(occupancy);
+    // let concatted = concatenate![Axis(1), *occupancy, *floor];
+    let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
+
+    let ret = concatted.map_axis(Axis(0), |x| {
+        let occupancy = x[0];
+        let floor = x[1];
+        let neighbors = x[2];
+        if floor == 1 {
+            0
+        } else {
+            if occupancy == 1 && 4 <= neighbors {
+                0
+            } else if occupancy == 0 && neighbors == 0 {
+                1
+            } else {
+                occupancy
+            }
+        }
+    });
+    // println!("Ret: {:?}?", ret);
+    // concatted
+    // concatted.clone()
     ret
 }
 
@@ -61,13 +88,27 @@ fn main() {
         let new_line = Array::from(reader_vec[i].clone());
         row.assign(&new_line);
     }
-    println!("Hello, world! {:?}", floor);
+    // println!("Hello, world! {:?}", floor);
+    let shape = floor.shape();
+    let mut prev = Array2::zeros((shape[0], shape[1]));
+    let mut counter = 0;
+    let loop_counter = loop {
+        let next = progress(&prev, &floor);
+        if next == prev {
+            break counter;
+        } else {
+            counter += 1;
+            prev = next;
+        }
+    };
+    println!("Stable state after {}", loop_counter);
+    println!("There are  {} occupied", prev.sum());
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_fun() {
+    fn test_neighbor_counter() {
         assert_eq!(
             super::neighbor_counter(&ndarray::arr2(&[[1, 2], [3, 4]])),
             ndarray::arr2(&[[9, 8], [7, 6]])
@@ -75,6 +116,32 @@ mod tests {
         assert_eq!(
             super::neighbor_counter(&ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]])),
             ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
+        );
+    }
+
+    #[test]
+
+    fn test_progress() {
+        assert_eq!(
+            super::progress(
+                &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+                &ndarray::Array2::zeros((3, 3))
+            ),
+            ndarray::Array2::ones((3, 3))
+        );
+        assert_eq!(
+            super::progress(
+                &ndarray::Array2::ones((3, 3)),
+                &ndarray::Array2::zeros((3, 3))
+            ),
+            ndarray::arr2(&[[1, 0, 1], [0, 0, 0], [1, 0, 1]]),
+        );
+        assert_eq!(
+            super::progress(
+                &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+                &ndarray::arr2(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            ),
+            ndarray::arr2(&[[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
         );
     }
 }
