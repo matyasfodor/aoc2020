@@ -29,7 +29,6 @@ fn neighbor_counter(arr: &Array2<usize>) -> Array2<usize> {
 
 fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>) -> Array2<usize> {
     let neighbors = neighbor_counter(occupancy);
-    // let concatted = concatenate![Axis(1), *occupancy, *floor];
     let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
 
     let ret = concatted.map_axis(Axis(0), |x| {
@@ -48,14 +47,11 @@ fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>) -> Array2<usize> {
             }
         }
     });
-    // println!("Ret: {:?}?", ret);
-    // concatted
-    // concatted.clone()
     ret
 }
 
 fn main() {
-    let matches = App::new("AOC solution 8")
+    let matches = App::new("AOC solution 11")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();
@@ -88,7 +84,6 @@ fn main() {
         let new_line = Array::from(reader_vec[i].clone());
         row.assign(&new_line);
     }
-    // println!("Hello, world! {:?}", floor);
     let shape = floor.shape();
     let mut prev = Array2::zeros((shape[0], shape[1]));
     let mut counter = 0;
