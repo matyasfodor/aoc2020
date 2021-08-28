@@ -1,24 +1,90 @@
 use clap::{App, Arg};
 use ndarray::{stack, Array, Array2, Axis};
+// use std::cmp::max;
+// use std::collections::HashMap;
+use itertools::Itertools;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-fn neighbor_counter(arr: &Array2<usize>) -> Array2<usize> {
+// fn gen_directions() -> 
+
+fn neighbor_counter(arr: &Array2<usize>, second: bool) -> Array2<usize> {
     let shape = arr.shape();
     let mut ret = Array::zeros((shape[0], shape[1]));
 
     for x in 0..(shape[0] as isize) {
         for y in 0..(shape[1] as isize) {
             let mut counter = 0;
-            for i in (x as isize - 1)..(x as isize + 2) {
-                if i < 0 || i >= (shape[0] as isize) {
-                    continue;
-                }
-                for j in (y - 1)..(y + 2) {
-                    if (x as isize == i && y == j) || j < 0 || j >= (shape[1] as isize) {
+            if second {
+                // let mut diagonals = (Some((x,y)), Some((x,y)), Some((x,y)), Some((x,y)));
+                // let NW = Some((x,y));
+                // let NE = Some((x,y));
+                // let SE = Some((x,y));
+                // let SW = Some((x,y));
+                // diagonals.0 = None;
+                // let had_change = true;
+                // while had_change {
+
+                // }
+                // let mut NW = false;
+                // let mut NE = false;
+                // let mut SE = false;
+                // let mut SW = false;
+                // for increment in 0 as isize..max(shape[0] as isize, shape[1] as isize) {
+                //     // if x - increment > 0 and y
+                //     if let Some(value) = arr.get((
+                //         max(0, x - increment) as usize,
+                //         max(0, y - increment) as usize,
+                //     )) {
+                //         if NW && value == &1 {
+                //             NW = true;
+                //         }
+                //     }
+                //     if let Some(value) =
+                //         arr.get(((x + increment) as usize, max(0, y - increment) as usize))
+                //     {
+                //         if NE && value == &1 {
+                //             NE = true;
+                //         }
+                //     }
+                //     if let Some(value) =
+                //         arr.get(((x + increment) as usize, (y + increment) as usize))
+                //     {
+                //         if SE && value == &1 {
+                //             SE = true;
+                //         }
+                //     }
+                //     if let Some(value) = arr.get((
+                //         max(0, x - increment) as usize as usize,
+                //         (y + increment) as usize,
+                //     )) {
+                //         if SW && value == &1 {
+                //             SW = true;
+                //         }
+                //     }
+
+                //     let res = (vec![NW, NE, SE, SW])
+                //         .iter()
+                //         .fold(0, |acc, x| if *x { acc + 1 } else { acc });
+                //     println!("Res {}", res);
+                // }
+                let it = (-1..1).cartesian_product(-1..1);
+                for (left, right) in it {
+                    if left == 0 && right == 0 {
                         continue;
                     }
-                    counter += arr.get((i as usize, j as usize)).unwrap()
+                }
+            } else {
+                for i in (x as isize - 1)..(x as isize + 2) {
+                    if i < 0 || i >= (shape[0] as isize) {
+                        continue;
+                    }
+                    for j in (y - 1)..(y + 2) {
+                        if (x as isize == i && y == j) || j < 0 || j >= (shape[1] as isize) {
+                            continue;
+                        }
+                        counter += arr.get((i as usize, j as usize)).unwrap()
+                    }
                 }
             }
             *ret.get_mut((x as usize, y as usize)).unwrap() = counter;
@@ -27,8 +93,8 @@ fn neighbor_counter(arr: &Array2<usize>) -> Array2<usize> {
     ret
 }
 
-fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>) -> Array2<usize> {
-    let neighbors = neighbor_counter(occupancy);
+fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>, second: bool) -> Array2<usize> {
+    let neighbors = neighbor_counter(occupancy, second);
     let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
 
     let ret = concatted.map_axis(Axis(0), |x| {
@@ -62,6 +128,8 @@ fn main() {
         "input.txt"
     };
 
+    let second = matches.is_present("second");
+
     let file = File::open(path).expect("File not found");
     let mut reader_vec: Vec<Vec<usize>> = vec![];
 
@@ -88,7 +156,7 @@ fn main() {
     let mut prev = Array2::zeros((shape[0], shape[1]));
     let mut counter = 0;
     let loop_counter = loop {
-        let next = progress(&prev, &floor);
+        let next = progress(&prev, &floor, second);
         if next == prev {
             break counter;
         } else {
@@ -105,11 +173,22 @@ mod tests {
     #[test]
     fn test_neighbor_counter() {
         assert_eq!(
-            super::neighbor_counter(&ndarray::arr2(&[[1, 2], [3, 4]])),
+            super::neighbor_counter(&ndarray::arr2(&[[1, 2], [3, 4]]), false),
             ndarray::arr2(&[[9, 8], [7, 6]])
         );
         assert_eq!(
-            super::neighbor_counter(&ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]])),
+            super::neighbor_counter(&ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]]), false),
+            ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
+        );
+        assert_eq!(
+            super::neighbor_counter(
+                &ndarray::arr2(&[
+                    [1, 0, 0], //
+                    [0, 0, 0], //
+                    [1, 0, 0]
+                ]),
+                true
+            ),
             ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
         );
     }
@@ -120,14 +199,16 @@ mod tests {
         assert_eq!(
             super::progress(
                 &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
-                &ndarray::Array2::zeros((3, 3))
+                &ndarray::Array2::zeros((3, 3)),
+                false
             ),
             ndarray::Array2::ones((3, 3))
         );
         assert_eq!(
             super::progress(
                 &ndarray::Array2::ones((3, 3)),
-                &ndarray::Array2::zeros((3, 3))
+                &ndarray::Array2::zeros((3, 3)),
+                false
             ),
             ndarray::arr2(&[[1, 0, 1], [0, 0, 0], [1, 0, 1]]),
         );
@@ -135,6 +216,7 @@ mod tests {
             super::progress(
                 &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
                 &ndarray::arr2(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                false
             ),
             ndarray::arr2(&[[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
         );
