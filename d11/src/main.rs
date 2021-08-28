@@ -1,3 +1,4 @@
+// use arr_macro::arr;
 use clap::{App, Arg};
 use ndarray::{stack, Array, Array2, Axis};
 // use std::cmp::max;
@@ -6,7 +7,28 @@ use itertools::Itertools;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-// fn gen_directions() -> 
+// fn gen_directions() -> [(isize, isize); 8] {
+//     let it = (-1..2).cartesian_product(-1..2);
+//     let mut ret: [(isize, isize); 8] = Default::default();
+//     // let ret = arr![(0, 0), 8];
+//     let mut cntr = 0;
+//     for (left, right) in it {
+//         if left == 0 && right == 0 {
+//             continue;
+//         }
+//         ret[cntr] = (left, right);
+//         cntr += 1;
+//     }
+//     ret
+// }
+
+// fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
+fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
+    let ret = (-1..2)
+        .cartesian_product(-1..2)
+        .filter(|(left, right)| *left != 0 || *right != 0);
+    ret
+}
 
 fn neighbor_counter(arr: &Array2<usize>, second: bool) -> Array2<usize> {
     let shape = arr.shape();
@@ -75,15 +97,10 @@ fn neighbor_counter(arr: &Array2<usize>, second: bool) -> Array2<usize> {
                     }
                 }
             } else {
-                for i in (x as isize - 1)..(x as isize + 2) {
-                    if i < 0 || i >= (shape[0] as isize) {
-                        continue;
-                    }
-                    for j in (y - 1)..(y + 2) {
-                        if (x as isize == i && y == j) || j < 0 || j >= (shape[1] as isize) {
-                            continue;
-                        }
-                        counter += arr.get((i as usize, j as usize)).unwrap()
+                for (left, right) in gen_directions_iter() {
+                    counter += match arr.get(((x + left) as usize, (y + right) as usize)) {
+                        Some(r) => *r,
+                        None => 0,
                     }
                 }
             }
@@ -171,7 +188,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_neighbor_counter() {
+    fn test_neighbor_counter_first() {
         assert_eq!(
             super::neighbor_counter(&ndarray::arr2(&[[1, 2], [3, 4]]), false),
             ndarray::arr2(&[[9, 8], [7, 6]])
@@ -180,6 +197,10 @@ mod tests {
             super::neighbor_counter(&ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]]), false),
             ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
         );
+    }
+
+    #[test]
+    fn test_neighbor_counter_second() {
         assert_eq!(
             super::neighbor_counter(
                 &ndarray::arr2(&[
@@ -220,5 +241,39 @@ mod tests {
             ),
             ndarray::arr2(&[[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
         );
+    }
+
+    // #[test]
+    // fn test_gen_directions() {
+    //     assert_eq!(
+    //         super::gen_directions(),
+    //         [
+    //             (-1, -1),
+    //             (-1, 0),
+    //             (-1, 1), //
+    //             (0, -1),
+    //             (0, 1), //
+    //             (1, -1),
+    //             (1, 0),
+    //             (1, 1), //
+    //         ]
+    //     )
+    // }
+
+    #[test]
+    fn test_gen_directions_iter() {
+        assert_eq!(
+            super::gen_directions_iter().collect::<Vec<(isize, isize)>>(),
+            vec![
+                (-1, -1),
+                (-1, 0),
+                (-1, 1), //
+                (0, -1),
+                (0, 1), //
+                (1, -1),
+                (1, 0),
+                (1, 1), //
+            ]
+        )
     }
 }
