@@ -1,28 +1,9 @@
-// use arr_macro::arr;
 use clap::{App, Arg};
-use ndarray::{stack, Array, Array2, Axis};
-// use std::cmp::max;
-// use std::collections::HashMap;
 use itertools::Itertools;
+use ndarray::{stack, Array, Array2, Axis};
 use std::fs::File;
 use std::io::{self, BufRead};
 
-// fn gen_directions() -> [(isize, isize); 8] {
-//     let it = (-1..2).cartesian_product(-1..2);
-//     let mut ret: [(isize, isize); 8] = Default::default();
-//     // let ret = arr![(0, 0), 8];
-//     let mut cntr = 0;
-//     for (left, right) in it {
-//         if left == 0 && right == 0 {
-//             continue;
-//         }
-//         ret[cntr] = (left, right);
-//         cntr += 1;
-//     }
-//     ret
-// }
-
-// fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
 fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
     let ret = (-1..2)
         .cartesian_product(-1..2)
@@ -30,78 +11,19 @@ fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
     ret
 }
 
-fn neighbor_counter(arr: &Array2<usize>, second: bool) -> Array2<usize> {
+fn neighbor_counter<P>(arr: &Array2<usize>, predicate: P) -> Array2<usize>
+where
+    P: Fn(&Array2<usize>, (isize, isize), (isize, isize)) -> bool,
+{
     let shape = arr.shape();
     let mut ret = Array::zeros((shape[0], shape[1]));
 
     for x in 0..(shape[0] as isize) {
         for y in 0..(shape[1] as isize) {
             let mut counter = 0;
-            if second {
-                // let mut diagonals = (Some((x,y)), Some((x,y)), Some((x,y)), Some((x,y)));
-                // let NW = Some((x,y));
-                // let NE = Some((x,y));
-                // let SE = Some((x,y));
-                // let SW = Some((x,y));
-                // diagonals.0 = None;
-                // let had_change = true;
-                // while had_change {
-
-                // }
-                // let mut NW = false;
-                // let mut NE = false;
-                // let mut SE = false;
-                // let mut SW = false;
-                // for increment in 0 as isize..max(shape[0] as isize, shape[1] as isize) {
-                //     // if x - increment > 0 and y
-                //     if let Some(value) = arr.get((
-                //         max(0, x - increment) as usize,
-                //         max(0, y - increment) as usize,
-                //     )) {
-                //         if NW && value == &1 {
-                //             NW = true;
-                //         }
-                //     }
-                //     if let Some(value) =
-                //         arr.get(((x + increment) as usize, max(0, y - increment) as usize))
-                //     {
-                //         if NE && value == &1 {
-                //             NE = true;
-                //         }
-                //     }
-                //     if let Some(value) =
-                //         arr.get(((x + increment) as usize, (y + increment) as usize))
-                //     {
-                //         if SE && value == &1 {
-                //             SE = true;
-                //         }
-                //     }
-                //     if let Some(value) = arr.get((
-                //         max(0, x - increment) as usize as usize,
-                //         (y + increment) as usize,
-                //     )) {
-                //         if SW && value == &1 {
-                //             SW = true;
-                //         }
-                //     }
-
-                //     let res = (vec![NW, NE, SE, SW])
-                //         .iter()
-                //         .fold(0, |acc, x| if *x { acc + 1 } else { acc });
-                //     println!("Res {}", res);
-                // }
-                let it = (-1..1).cartesian_product(-1..1);
-                for (left, right) in it {
-                    if left == 0 && right == 0 {
-                        continue;
-                    }
-                }
-            } else {
-                for (left, right) in gen_directions_iter() {
-                    counter += match arr.get(((x + left) as usize, (y + right) as usize)) {
-                        Some(r) => *r,
-                        None => 0,
-                    }
+            for (left, right) in gen_directions_iter() {
+                if predicate(arr, (x, y), (left, right)) {
+                    counter += 1;
                 }
             }
             *ret.get_mut((x as usize, y as usize)).unwrap() = counter;
@@ -110,8 +32,62 @@ fn neighbor_counter(arr: &Array2<usize>, second: bool) -> Array2<usize> {
     ret
 }
 
+fn simple_count(arr: &Array2<usize>, current: (isize, isize), direction: (isize, isize)) -> bool {
+    match arr.get((
+        (current.0 + direction.0) as usize,
+        (current.1 + direction.1) as usize,
+    )) {
+        Some(r) => *r == 1,
+        None => false,
+    }
+}
+
+fn second_count(arr: &Array2<usize>, current: (isize, isize), direction: (isize, isize)) -> bool {
+    let mut mut_current = (current.0 + direction.0, current.1 + direction.1);
+    let mut finished = false;
+    let mut has_neighbor = false;
+
+    while !finished {
+        finished = match arr.get((mut_current.0 as usize, mut_current.1 as usize)) {
+            Some(x) => {
+                if *x == 1 {
+                    has_neighbor = true;
+                    true
+                } else {
+                    false
+                }
+            }
+            None => true,
+        };
+        mut_current = (mut_current.0 + direction.0, mut_current.1 + direction.1);
+    }
+    has_neighbor
+}
+
+fn repr(occupancy: &Array2<usize>, floor: &Array2<usize>) {
+    for ((x, y), value) in occupancy.indexed_iter() {
+        if y == 0 {
+            print!("\n");
+        }
+        let floor_val = floor.get((x, y)).unwrap();
+        print!(
+            "{}",
+            if *floor_val == 1 {
+                "."
+            } else {
+                if *value == 1 {
+                    "#"
+                } else {
+                    "L"
+                }
+            }
+        );
+    }
+    print!("\n");
+}
+
 fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>, second: bool) -> Array2<usize> {
-    let neighbors = neighbor_counter(occupancy, second);
+    let neighbors = neighbor_counter(occupancy, if second { second_count } else { simple_count });
     let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
 
     let ret = concatted.map_axis(Axis(0), |x| {
@@ -121,7 +97,7 @@ fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>, second: bool) -> A
         if floor == 1 {
             0
         } else {
-            if occupancy == 1 && 4 <= neighbors {
+            if occupancy == 1 && if second { 5 } else { 4 } <= neighbors {
                 0
             } else if occupancy == 0 && neighbors == 0 {
                 1
@@ -174,6 +150,7 @@ fn main() {
     let mut counter = 0;
     let loop_counter = loop {
         let next = progress(&prev, &floor, second);
+        repr(&next, &floor);
         if next == prev {
             break counter;
         } else {
@@ -188,19 +165,58 @@ fn main() {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_neighbor_counter_first() {
+    fn test_second_count_1() {
         assert_eq!(
-            super::neighbor_counter(&ndarray::arr2(&[[1, 2], [3, 4]]), false),
-            ndarray::arr2(&[[9, 8], [7, 6]])
+            super::second_count(&ndarray::arr2(&[[0, 0, 0]]), (0, 0), (0, 1)),
+            false
         );
+    }
+
+    #[test]
+    fn test_second_count_2() {
         assert_eq!(
-            super::neighbor_counter(&ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]]), false),
+            super::second_count(&ndarray::arr2(&[[0, 1, 0]]), (0, 0), (0, 1)),
+            true
+        );
+    }
+
+    #[test]
+    fn test_second_count_3() {
+        assert_eq!(
+            super::second_count(&ndarray::arr2(&[[1, 0, 0]]), (0, 1), (0, 1)),
+            false
+        );
+    }
+
+    #[test]
+    fn test_second_count_4() {
+        assert_eq!(
+            super::second_count(&ndarray::arr2(&[[1, 0, 0]]), (0, 1), (0, -1)),
+            true
+        );
+    }
+
+    #[test]
+    fn test_neighbor_counter_first_1() {
+        assert_eq!(
+            super::neighbor_counter(&ndarray::arr2(&[[0, 1], [0, 0]]), super::simple_count),
+            ndarray::arr2(&[[1, 0], [1, 1]])
+        );
+    }
+
+    #[test]
+    fn test_neighbor_counter_first_2() {
+        assert_eq!(
+            super::neighbor_counter(
+                &ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]]),
+                super::simple_count
+            ),
             ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
         );
     }
 
     #[test]
-    fn test_neighbor_counter_second() {
+    fn test_neighbor_counter_second_1() {
         assert_eq!(
             super::neighbor_counter(
                 &ndarray::arr2(&[
@@ -208,9 +224,9 @@ mod tests {
                     [0, 0, 0], //
                     [1, 0, 0]
                 ]),
-                true
+                super::second_count
             ),
-            ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
+            ndarray::arr2(&[[1, 1, 2], [2, 2, 0], [1, 1, 2]])
         );
     }
 
