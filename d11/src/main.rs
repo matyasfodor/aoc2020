@@ -11,9 +11,9 @@ fn gen_directions_iter() -> impl Iterator<Item = (isize, isize)> + 'static {
     ret
 }
 
-fn neighbor_counter<P>(arr: &Array2<usize>, predicate: P) -> Array2<usize>
+fn neighbor_counter<P>(arr: &Array2<usize>, floor: &Array2<usize>, predicate: P) -> Array2<usize>
 where
-    P: Fn(&Array2<usize>, (isize, isize), (isize, isize)) -> bool,
+    P: Fn(&Array2<usize>, &Array2<usize>, (isize, isize), (isize, isize)) -> bool,
 {
     let shape = arr.shape();
     let mut ret = Array::zeros((shape[0], shape[1]));
@@ -22,7 +22,7 @@ where
         for y in 0..(shape[1] as isize) {
             let mut counter = 0;
             for (left, right) in gen_directions_iter() {
-                if predicate(arr, (x, y), (left, right)) {
+                if predicate(arr, floor, (x, y), (left, right)) {
                     counter += 1;
                 }
             }
@@ -32,7 +32,12 @@ where
     ret
 }
 
-fn simple_count(arr: &Array2<usize>, current: (isize, isize), direction: (isize, isize)) -> bool {
+fn simple_count(
+    arr: &Array2<usize>,
+    _: &Array2<usize>,
+    current: (isize, isize),
+    direction: (isize, isize),
+) -> bool {
     match arr.get((
         (current.0 + direction.0) as usize,
         (current.1 + direction.1) as usize,
@@ -42,54 +47,115 @@ fn simple_count(arr: &Array2<usize>, current: (isize, isize), direction: (isize,
     }
 }
 
-fn second_count(arr: &Array2<usize>, current: (isize, isize), direction: (isize, isize)) -> bool {
+fn second_count(
+    arr: &Array2<usize>,
+    floor: &Array2<usize>,
+    current: (isize, isize),
+    direction: (isize, isize),
+) -> bool {
     let mut mut_current = (current.0 + direction.0, current.1 + direction.1);
     let mut finished = false;
     let mut has_neighbor = false;
 
     while !finished {
+        // finished = match arr.get((mut_current.0 as usize, mut_current.1 as usize)) {
+        //     Some(x) => {
+        //         if *x == 1 {
+        //             has_neighbor = true;
+        //             true
+        //         } else {
+        //             false
+        //         }
+        //     }
+        //     None => true,
+        // };
+
         finished = match arr.get((mut_current.0 as usize, mut_current.1 as usize)) {
             Some(x) => {
-                if *x == 1 {
-                    has_neighbor = true;
-                    true
-                } else {
+                let floor_value = floor
+                    .get((mut_current.0 as usize, mut_current.1 as usize))
+                    .unwrap();
+
+                // println!(
+                //     "## Current {:?} Floor value {} occupancy value {}",
+                //     mut_current, floor_value, x
+                // );
+                if *floor_value == 1 {
                     false
+                } else {
+                    if *x == 1 {
+                        has_neighbor = true;
+                        true
+                    } else {
+                        true
+                    }
                 }
+
+                // match (floor_value, x) {
+                //     (0, _) => false,
+                //     (1, 1) => {
+                //         has_neighbor = true;
+                //         true
+                //     }
+                //     (1, 0) => false,
+                //     _ => {
+                //         panic!("Shouldn't have reach this!")
+                //     }
+                // }
+
+                // if *x == 1 {
+                //     has_neighbor = true;
+                //     true
+                // } else {
+                //     false
+                // }
             }
             None => true,
         };
+
+        // let floor_value = floor.get((mut_current.0 as usize, mut_current.1 as usize));
         mut_current = (mut_current.0 + direction.0, mut_current.1 + direction.1);
     }
     has_neighbor
 }
 
-fn repr(occupancy: &Array2<usize>, floor: &Array2<usize>) {
+fn repr(occupancy: &Array2<usize>, floor: &Array2<usize>, disp_number: bool) {
     for ((x, y), value) in occupancy.indexed_iter() {
         if y == 0 {
             print!("\n");
         }
         let floor_val = floor.get((x, y)).unwrap();
-        print!(
-            "{}",
-            if *floor_val == 1 {
-                "."
-            } else {
-                if *value == 1 {
-                    "#"
+
+        if *floor_val == 1 {
+            print!(".")
+        } else {
+            if *value == 1 {
+                if disp_number {
+                    print!("{}", *value)
                 } else {
-                    "L"
+                    print!("{}", "#")
+                }
+            } else {
+                if disp_number {
+                    print!("{}", *value)
+                } else {
+                    print!("{}", "L")
                 }
             }
-        );
+        }
     }
     print!("\n");
 }
 
 fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>, second: bool) -> Array2<usize> {
-    let neighbors = neighbor_counter(occupancy, if second { second_count } else { simple_count });
+    let neighbors = neighbor_counter(
+        occupancy,
+        floor,
+        if second { second_count } else { simple_count },
+    );
     let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
 
+    // repr(&neighbors, floor, true);
     let ret = concatted.map_axis(Axis(0), |x| {
         let occupancy = x[0];
         let floor = x[1];
@@ -150,7 +216,7 @@ fn main() {
     let mut counter = 0;
     let loop_counter = loop {
         let next = progress(&prev, &floor, second);
-        repr(&next, &floor);
+        // repr(&next, &floor, false);
         if next == prev {
             break counter;
         } else {
