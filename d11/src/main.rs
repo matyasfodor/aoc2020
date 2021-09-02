@@ -58,68 +58,30 @@ fn second_count(
     let mut has_neighbor = false;
 
     while !finished {
-        // finished = match arr.get((mut_current.0 as usize, mut_current.1 as usize)) {
-        //     Some(x) => {
-        //         if *x == 1 {
-        //             has_neighbor = true;
-        //             true
-        //         } else {
-        //             false
-        //         }
-        //     }
-        //     None => true,
-        // };
-
         finished = match arr.get((mut_current.0 as usize, mut_current.1 as usize)) {
             Some(x) => {
                 let floor_value = floor
                     .get((mut_current.0 as usize, mut_current.1 as usize))
                     .unwrap();
 
-                // println!(
-                //     "## Current {:?} Floor value {} occupancy value {}",
-                //     mut_current, floor_value, x
-                // );
                 if *floor_value == 1 {
                     false
                 } else {
                     if *x == 1 {
                         has_neighbor = true;
-                        true
-                    } else {
-                        true
                     }
+                    true
                 }
-
-                // match (floor_value, x) {
-                //     (0, _) => false,
-                //     (1, 1) => {
-                //         has_neighbor = true;
-                //         true
-                //     }
-                //     (1, 0) => false,
-                //     _ => {
-                //         panic!("Shouldn't have reach this!")
-                //     }
-                // }
-
-                // if *x == 1 {
-                //     has_neighbor = true;
-                //     true
-                // } else {
-                //     false
-                // }
             }
             None => true,
         };
 
-        // let floor_value = floor.get((mut_current.0 as usize, mut_current.1 as usize));
         mut_current = (mut_current.0 + direction.0, mut_current.1 + direction.1);
     }
     has_neighbor
 }
 
-fn repr(occupancy: &Array2<usize>, floor: &Array2<usize>, disp_number: bool) {
+fn _repr(occupancy: &Array2<usize>, floor: &Array2<usize>, disp_number: bool) {
     for ((x, y), value) in occupancy.indexed_iter() {
         if y == 0 {
             print!("\n");
@@ -155,7 +117,6 @@ fn progress(occupancy: &Array2<usize>, floor: &Array2<usize>, second: bool) -> A
     );
     let concatted = stack![Axis(0), *occupancy, *floor, neighbors];
 
-    // repr(&neighbors, floor, true);
     let ret = concatted.map_axis(Axis(0), |x| {
         let occupancy = x[0];
         let floor = x[1];
@@ -216,7 +177,6 @@ fn main() {
     let mut counter = 0;
     let loop_counter = loop {
         let next = progress(&prev, &floor, second);
-        // repr(&next, &floor, false);
         if next == prev {
             break counter;
         } else {
@@ -233,7 +193,12 @@ mod tests {
     #[test]
     fn test_second_count_1() {
         assert_eq!(
-            super::second_count(&ndarray::arr2(&[[0, 0, 0]]), (0, 0), (0, 1)),
+            super::second_count(
+                &ndarray::arr2(&[[0, 0, 0]]),
+                &ndarray::arr2(&[[0, 0, 0]]),
+                (0, 0),
+                (0, 1)
+            ),
             false
         );
     }
@@ -241,7 +206,12 @@ mod tests {
     #[test]
     fn test_second_count_2() {
         assert_eq!(
-            super::second_count(&ndarray::arr2(&[[0, 1, 0]]), (0, 0), (0, 1)),
+            super::second_count(
+                &ndarray::arr2(&[[0, 1, 0]]),
+                &ndarray::arr2(&[[0, 0, 0]]),
+                (0, 0),
+                (0, 1)
+            ),
             true
         );
     }
@@ -249,7 +219,12 @@ mod tests {
     #[test]
     fn test_second_count_3() {
         assert_eq!(
-            super::second_count(&ndarray::arr2(&[[1, 0, 0]]), (0, 1), (0, 1)),
+            super::second_count(
+                &ndarray::arr2(&[[1, 0, 0]]),
+                &ndarray::arr2(&[[0, 0, 0]]),
+                (0, 1),
+                (0, 1)
+            ),
             false
         );
     }
@@ -257,7 +232,12 @@ mod tests {
     #[test]
     fn test_second_count_4() {
         assert_eq!(
-            super::second_count(&ndarray::arr2(&[[1, 0, 0]]), (0, 1), (0, -1)),
+            super::second_count(
+                &ndarray::arr2(&[[1, 0, 0]]),
+                &ndarray::arr2(&[[0, 0, 0]]),
+                (0, 1),
+                (0, -1)
+            ),
             true
         );
     }
@@ -265,8 +245,12 @@ mod tests {
     #[test]
     fn test_neighbor_counter_first_1() {
         assert_eq!(
-            super::neighbor_counter(&ndarray::arr2(&[[0, 1], [0, 0]]), super::simple_count),
-            ndarray::arr2(&[[1, 0], [1, 1]])
+            super::neighbor_counter(
+                &ndarray::arr2(&[[0, 1], [0, 0]]),
+                &ndarray::arr2(&[[0, 0], [0, 0]]),
+                super::simple_count
+            ),
+            ndarray::arr2(&[[1, 0], [1, 1]]),
         );
     }
 
@@ -275,6 +259,7 @@ mod tests {
         assert_eq!(
             super::neighbor_counter(
                 &ndarray::arr2(&[[0, 1, 0], [1, 1, 1], [0, 1, 0]]),
+                &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
                 super::simple_count
             ),
             ndarray::arr2(&[[3, 3, 3], [3, 4, 3], [3, 3, 3]])
@@ -290,9 +275,10 @@ mod tests {
                     [0, 0, 0], //
                     [1, 0, 0]
                 ]),
+                &ndarray::arr2(&[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
                 super::second_count
             ),
-            ndarray::arr2(&[[1, 1, 2], [2, 2, 0], [1, 1, 2]])
+            ndarray::arr2(&[[0, 1, 0], [2, 2, 0], [0, 1, 0]])
         );
     }
 
