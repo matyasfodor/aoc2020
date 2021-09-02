@@ -26,38 +26,154 @@ fn turn(current: Direction, left: bool) -> Direction {
 }
 
 #[derive(Debug)]
-struct Point<T> {
-    x: T,
-    y: T,
+struct Point {
+    x: isize,
+    y: isize,
+}
+
+#[derive(Debug)]
+struct Ship {
+    position: Point,
     direction: Direction,
 }
 
-fn translate(pos: &Point<isize>, direction: &str, value: isize) -> Point<isize> {
+struct InputInstruction {
+    direction: char,
+    num: isize,
+}
+
+struct ShipWithWaypoint {
+    position: Point,
+    waypoint_position: Point,
+}
+
+fn translate(pos: &Point, direction: char, value: isize) -> Point {
     match direction {
-        "N" => Point::<isize> {
+        'N' => Point {
             x: pos.x,
             y: pos.y + value,
-            direction: pos.direction,
         },
-        "S" => Point {
+        'S' => Point {
             x: pos.x,
             y: pos.y - value,
-            direction: pos.direction,
         },
-        "E" => Point {
+        'E' => Point {
             x: pos.x + value,
             y: pos.y,
-            direction: pos.direction,
         },
-        "W" => Point {
+        'W' => Point {
             x: pos.x - value,
             y: pos.y,
-            direction: pos.direction,
         },
         _ => {
             panic!("This should not happen");
         }
     }
+}
+
+fn first(instructions: &Vec<InputInstruction>) {
+    let mut direction_to_string = HashMap::new();
+
+    direction_to_string.insert(Direction::North, 'N');
+    direction_to_string.insert(Direction::South, 'S');
+    direction_to_string.insert(Direction::East, 'E');
+    direction_to_string.insert(Direction::West, 'W');
+
+    let end_point = instructions.iter().fold(
+        Ship {
+            position: Point { x: 0, y: 0 },
+            direction: Direction::East,
+        },
+        |current, InputInstruction { direction, num }| match *direction {
+            'N' | 'S' | 'W' | 'E' => Ship {
+                position: translate(&current.position, *direction, *num),
+                ..current
+            },
+            'L' | 'R' => {
+                let repeat = num / 90;
+                let mut new_direction = current.direction;
+                for _ in 0..repeat {
+                    new_direction = turn(new_direction, *direction == 'L');
+                }
+                Ship {
+                    direction: new_direction,
+                    ..current
+                }
+            }
+            'F' => Ship {
+                position: translate(
+                    &current.position,
+                    direction_to_string[&current.direction],
+                    *num,
+                ),
+                ..current
+            },
+            _ => {
+                panic!("This should not happen! Head is {}", *direction)
+            }
+        },
+    );
+
+    let manhattan_distance = end_point.position.x.abs() + end_point.position.y.abs();
+    println!(
+        "Manhattan distance from the source is {}",
+        manhattan_distance
+    );
+}
+
+fn second(instructions: &Vec<InputInstruction>) {
+    let mut direction_to_string = HashMap::new();
+
+    direction_to_string.insert(Direction::North, 'N');
+    direction_to_string.insert(Direction::South, 'S');
+    direction_to_string.insert(Direction::East, 'E');
+    direction_to_string.insert(Direction::West, 'W');
+
+    let end_point = instructions.iter().fold(
+        ShipWithWaypoint {
+            position: Point { x: 0, y: 0 },
+            waypoint_position: Point { x: 10, y: 1 },
+        },
+        |current, InputInstruction { direction, num }| match *direction {
+            'N' | 'S' | 'W' | 'E' => ShipWithWaypoint {
+                waypoint_position: translate(&current.waypoint_position, *direction, *num),
+                ..current
+            },
+            'L' | 'R' => {
+                let repeat = num / 90;
+                let mut waypoint_position = current.waypoint_position;
+                let modifier = if *direction == 'L' { -1 } else { 1 };
+
+                for _ in 0..repeat {
+                    waypoint_position = Point {
+                        x: modifier * waypoint_position.y,
+                        y: modifier * -waypoint_position.x,
+                    }
+                }
+
+                ShipWithWaypoint {
+                    waypoint_position,
+                    ..current
+                }
+            }
+            'F' => ShipWithWaypoint {
+                position: Point {
+                    x: current.position.x + current.waypoint_position.x * num,
+                    y: current.position.y + current.waypoint_position.y * num,
+                },
+                ..current
+            },
+            _ => {
+                panic!("This should not happen! Head is {}", *direction)
+            }
+        },
+    );
+
+    let manhattan_distance = end_point.position.x.abs() + end_point.position.y.abs();
+    println!(
+        "Manhattan distance from the source is {}",
+        manhattan_distance
+    );
 }
 
 fn main() {
@@ -72,63 +188,32 @@ fn main() {
         "input.txt"
     };
 
-    // let second = matches.is_present("second");
+    let is_second = matches.is_present("second");
 
     let file = File::open(path).expect("File not found");
 
-    let mut current = Point {
-        x: 0,
-        y: 0,
-        direction: Direction::East,
-    };
-
     let line_matcher = Regex::new(r"^(?P<letter>[NSEWLRF])(?P<number>\d+)$").unwrap();
 
-    let mut direction_to_string = HashMap::new();
+    let instructions: Vec<InputInstruction> = io::BufReader::new(file)
+        .lines()
+        .map(|line| {
+            let unwrapped = line.unwrap();
+            let caps = line_matcher.captures(&unwrapped).unwrap();
 
-    direction_to_string.insert(Direction::North, "N");
-    direction_to_string.insert(Direction::South, "S");
-    direction_to_string.insert(Direction::East, "E");
-    direction_to_string.insert(Direction::West, "W");
+            let head = caps.name("letter").map_or("", |m| m.as_str());
+            let num = caps
+                .name("number")
+                .map_or(0, |m| m.as_str().parse::<isize>().unwrap());
 
-    io::BufReader::new(file).lines().for_each(|line| {
-        let unwrapped = line.unwrap();
-        let caps = line_matcher.captures(&unwrapped).unwrap();
-
-        let head = caps.name("letter").map_or("", |m| m.as_str());
-        let num = caps
-            .name("number")
-            .map_or(0, |m| m.as_str().parse::<isize>().unwrap());
-
-        // println!("## line {} {}", head, num);
-
-        current = match head {
-            "N" | "S" | "W" | "E" => translate(&current, head, num),
-            "L" | "R" => {
-                let repeat = num / 90;
-                // println!("Turn {} times based on {}", repeat, num);
-                let mut new_direction = current.direction;
-                for _ in 0..repeat {
-                    new_direction = turn(new_direction, head == "L");
-                    // println!("New direction is {:?}", new_direction);
-                }
-                Point {
-                    x: current.x,
-                    y: current.y,
-                    direction: new_direction,
-                }
+            InputInstruction {
+                direction: head.chars().nth(0).unwrap(),
+                num,
             }
-            "F" => translate(&current, direction_to_string[&current.direction], num),
-            _ => {
-                panic!("This should not happen! Head is {}", head)
-            }
-        };
-        // println!("Lines is {}, current is {:?}", unwrapped, current);
-    });
-
-    let manhattan_distance = current.x.abs() + current.y.abs();
-    println!(
-        "Manhattan distance from the source is {}, current is {:?}",
-        manhattan_distance, current
-    );
+        })
+        .collect();
+    if !is_second {
+        first(&instructions);
+    } else {
+        second(&instructions);
+    }
 }
