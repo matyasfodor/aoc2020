@@ -2,14 +2,20 @@ use clap::{App, Arg};
 use std::fs::File;
 use std::io::{self, BufRead};
 
-fn first(eta: isize, bus_ids: &Vec<isize>) {
-    println!("Parsed ETS {}, bus_ids {:?}", eta, bus_ids);
+#[derive(Debug)]
+struct BusInfo<T> {
+    offset: T,
+    id: T,
+}
+
+fn first(eta: isize, bus_info: &Vec<BusInfo<isize>>) {
+    println!("Parsed ETS {}, bus_ids {:?}", eta, bus_info);
     let mut min_minutes_to_wait = std::isize::MAX;
     let mut min_bus_id = -1;
-    bus_ids.iter().for_each(|bus_id| {
-        let mins_to_wait = bus_id - (eta % bus_id);
+    bus_info.iter().for_each(|BusInfo { id, .. }| {
+        let mins_to_wait = id - (eta % id);
         if mins_to_wait < min_minutes_to_wait {
-            min_bus_id = *bus_id;
+            min_bus_id = *id;
             min_minutes_to_wait = mins_to_wait;
         }
     });
@@ -22,7 +28,9 @@ fn first(eta: isize, bus_ids: &Vec<isize>) {
     );
 }
 
-fn second(bus_ids: &Vec<isize>) {}
+fn second(_bus_info: &Vec<BusInfo<isize>>) {
+    println!("Second");
+}
 
 fn main() {
     let matches = App::new("AOC solution 12")
@@ -46,15 +54,22 @@ fn main() {
     let second_line = input_iter.next().unwrap().unwrap();
 
     let eta = first_line.parse::<isize>().unwrap();
-    let bus_ids = second_line
+    let bus_info = second_line
         .split(",")
-        .filter(|substr| *substr != "x")
-        .map(|substr| substr.parse::<isize>().unwrap())
-        .collect::<Vec<isize>>();
+        .enumerate()
+        .fold(vec![], |mut acc, (index, value)| {
+            if value != "x" {
+                acc.push(BusInfo::<isize> {
+                    offset: index as isize,
+                    id: value.parse().unwrap(),
+                })
+            }
+            acc
+        });
 
     if !is_second {
-        first(eta, &bus_ids);
+        first(eta, &bus_info);
     } else {
-        second(&bus_ids);
+        second(&bus_info);
     }
 }
