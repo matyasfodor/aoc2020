@@ -177,7 +177,7 @@ fn second(instructions: &Vec<InputInstruction>) {
 }
 
 fn main() {
-    let matches = App::new("AOC solution 11")
+    let matches = App::new("AOC solution 12")
         .arg(Arg::with_name("test").short("t").long("test"))
         .arg(Arg::with_name("second").short("s").long("second"))
         .get_matches();
