@@ -2,14 +2,13 @@ use clap::{App, Arg};
 use std::fs::File;
 use std::io::{self, BufRead};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct BusInfo<T> {
     offset: T,
     id: T,
 }
 
 fn first(eta: isize, bus_info: &Vec<BusInfo<isize>>) {
-    println!("Parsed ETS {}, bus_ids {:?}", eta, bus_info);
     let mut min_minutes_to_wait = std::isize::MAX;
     let mut min_bus_id = -1;
     bus_info.iter().for_each(|BusInfo { id, .. }| {
@@ -28,8 +27,23 @@ fn first(eta: isize, bus_info: &Vec<BusInfo<isize>>) {
     );
 }
 
-fn second(_bus_info: &Vec<BusInfo<isize>>) {
-    println!("Second");
+// Credits go to https://dev.to/benwtrent/comment/1962m
+fn second(bus_info: &Vec<BusInfo<isize>>) {
+    let mut bus_copy = bus_info.to_vec();
+    bus_copy.sort_by_key(|a| a.offset);
+
+    let head = bus_copy.first().unwrap();
+
+    let mut increment = head.id;
+    let mut timestamp = 0;
+    for BusInfo{offset, id } in bus_copy[1..].iter() {
+        println!("Finding timestamp for {} with offset {}. timestamp is {}", id, offset, timestamp);
+        while (timestamp + offset) % id != 0 {
+            timestamp += increment;
+        }
+        increment *= id
+    }
+    println!("Tiemstamp {}", timestamp);
 }
 
 fn main() {
